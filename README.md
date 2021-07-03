@@ -1,20 +1,21 @@
 # Ansible Role: users
 
-[![Build Status](https://travis-ci.org/unxnn/ansible-role-users.svg?branch=master)](https://travis-ci.org/unxnn/ansible-role-users)
+[![CI](https://github.com/unxnn/ansible-role-users/workflows/CI/badge.svg?event=push)](https://github.com/unxnn/ansible-role-users/actions?query=workflow%3ACI)
 
-Role to manage users on a system.
+Role to manage users on a UNIX-based system.
 
 ## Role configuration
 
 * `users_create_per_user_group` (default: true) - when creating users, also
   create a group with the same username and make that the user's primary
   group.
-* `users_group` (default: users) - if users_create_per_user_group is _not_ set,
+* `users_group` (default: users) - if users_create_per_user_group is _not_ set, 
   then this is the primary group for all created users.
-* `users_default_shell` (default: /bin/bash) - the default shell if none is
-  specified for the user.
 * `users_create_homedirs` (default: true) - create home directories for new
   users. Set this to false if you manage home directories separately.
+* `users_default_shell` (default: /bin/bash) - the default shell if none is
+  specified for the user.
+* `authorized_keys_file` (default: .ssh/authorized_keys) - Set this if the ssh server is configured to use a non standard authorized keys file.
 
 ## Creating users
 
@@ -30,12 +31,12 @@ The following attributes are required for each user:
 * `uid` - The numeric user id for the user (optional). This is required for uid consistency
   across systems.
 * `gid` - The numeric group id for the group (optional). Otherwise, the
-  `uid` will be used.
+`uid` will be used.
 * `password` - If a hash is provided then that will be used, but otherwise the
   account will be locked.
 * `update_password` - This can be either 'always' or 'on_create'
-  - `'always'` will update passwords if they differ. (default)
-  - `'on_create'` will only set the password for newly created users.
+  + `'always'` will update passwords if they differ. (default)
+  + `'on_create'` will only set the password for newly created users.
 * `group` - Optional primary group override.
 * `groups` - A list of supplementary groups for the user.
 * `append` - If yes, will only add groups, not set them to just the list in groups (optional).
@@ -49,11 +50,13 @@ In addition, the following items are optional for each user:
 * `shell` - The user's shell. This defaults to /bin/bash. The default is
   configurable using the users_default_shell variable if you want to give all
   users the same shell, but it is different than /bin/bash.
+* `is_system_user` -  Set to `True` to create system user.
 
 Example:
 
     ---
     users:
+
       - username: foo
         name: Foo Bar
         groups: ['admin','systemd-journal']
@@ -62,9 +65,11 @@ Example:
         profile: |
           alias ll='ls -ahl'
         ssh_key:
+
           - "ssh-rsa AAAAA.... foo@server"
           - "ssh-rsa AAAAB.... foo2@server"
     groups_to_create:
+
       - name: developers
         gid: 20000
 
@@ -72,13 +77,13 @@ Generating a password hash:
 
     # On Debian/Ubuntu (via the package "whois")
     mkpasswd --method=SHA-512 --rounds=4096
-    
+
     # OpenSSL (note: this will only make md5crypt.  While better than plantext it should not be     considered fully secure)
     openssl passwd -1
-    
+
     # Python (change password and salt values)
     python -c "import crypt, getpass, pwd; print crypt.crypt('password', '\$6\$SALT\$')"
-    
+
     # Perl (change password and salt values)
     perl -e 'print crypt("password","\$6\$SALT\$") . "\n"'
 
@@ -86,7 +91,7 @@ Generating a password hash:
 
 The `users_deleted` variable contains a list of users who should no longer be
 in the system, and these will be removed on the next ansible run. The format
-is the same as for users to add, but the only required field is `username`.
+is the same as for users to add, but the only required field is `username` .
 However, it is recommended that you also keep the `uid` field for reference so
 that numeric user ids are not accidentally reused.
 
@@ -94,6 +99,7 @@ You can optionally choose to remove the user's home directory and mail spool wit
 the `remove` parameter, and force removal of files with the `force` parameter.
 
     users_deleted:
+
       - username: bar
         uid: 1003
         remove: yes
