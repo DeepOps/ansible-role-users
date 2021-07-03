@@ -1,21 +1,30 @@
 ---
+- name: Check visudo exists
+  stat:
+    path: /usr/sbin/visudo
+  register: visudo
+
 - name: Allow admin group sudo without password
   lineinfile:
     path: /etc/sudoers
     state: present
-    regexp: '^%admin ALL='
-    line: '%admin ALL=(ALL) NOPASSWD: ALL'
-    validate: '/usr/sbin/visudo -cf %s'
+    regexp: "^%admin ALL="
+    line: "%admin ALL=(ALL) NOPASSWD: ALL"
+    validate: "/usr/sbin/visudo -cf %s"
+  when: visudo.stat.exists
   tags: ["users", "groups", "configuration"]
 
 - name: Creating groups
-  group: name="{{ item.name }}" gid="{{ item.gid | default(omit) }}"
+  group:
+    name: "{{ item.name }}"
+    gid: "{{ item.gid | default(omit) }}"
   with_items: "{{ groups_to_create }}"
   tags: ["users", "groups", "configuration"]
 
 - name: Per-user group creation
-  group: name="{{ item.username }}"
-         gid="{{ item.gid | default(item.uid) | default(omit) }}"
+  group:
+    name: "{{ item.username }}"
+    gid: "{{ item.gid | default(item.uid) | default(omit) }}"
   with_items: "{{ users }}"
   when: "'group' not in item and users_create_per_user_group"
   tags: ["users", "configuration"]
@@ -35,6 +44,7 @@
     createhome: "{{ 'yes' if users_create_homedirs else 'no' }}"
     generate_ssh_key: "{{ item.generate_ssh_key | default(omit)  }}"
     update_password: "{{ item.update_password | default(omit) }}"
+    system: "{{ item.is_system_user | default(omit) | bool or omit }}"
   with_items: "{{ users }}"
   tags: ["users", "configuration"]
 
@@ -42,11 +52,11 @@
   authorized_key:
     user: "{{ item.0.username }}"
     key: "{{ item.1 }}"
-    path: "{{ item.0.home | default('/home/' + item.0.username)  }}/.ssh/authorized_keys"
+    path: "{{ item.0.home | default('/home/' + item.0.username) }}/{{ authorized_keys_file }}"
   with_subelements:
     - "{{ users }}"
     - ssh_key
-    - skip_missing: yes
+    - skip_missing: true
   tags: ["users", "configuration"]
 
 - name: Setup user profiles
@@ -70,7 +80,9 @@
   tags: ["users", "configuration"]
 
 - name: Deleted per-user group removal
-  group: name="{{ item.username }}" state=absent
+  group:
+    name: "{{ item.username }}"
+    state: absent
   with_items: "{{ users_deleted }}"
   when: users_create_per_user_group
   tags: ["users", "configuration"]
